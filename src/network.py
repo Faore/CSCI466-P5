@@ -24,14 +24,26 @@ class Interface:
     def get(self, in_or_out):
         try:
             if in_or_out == 'in':
-                pkt_S = self.in_queue.get(False)
-#                 if pkt_S is not None:
-#                     print('getting packet from the IN queue')
+                pkt_S = ''
+                #Search for High Priority
+                for item in range(self.in_queue.qsize()):
+                    if NetworkPacket.from_byte_S(self.in_queue.queue[item]).priority == 1:
+                        pkt_S = self.in_queue.queue[item]
+                        self.in_queue.queue.remove(pkt_S)
+                        #print('Returning Priority 1 packet.')
+                        break
+                # Check if one was found, if not pop whatevers first in the queue.
+                if pkt_S == '':
+                    pkt_S = self.in_queue.get(False)
+                    #print('Returning Priority 0 packet.')
+                #if pkt_S is not None:
+                #    print('getting packet from the IN queue')
                 return pkt_S
+
             else:
                 pkt_S = self.out_queue.get(False)
-#                 if pkt_S is not None:
-#                     print('getting packet from the OUT queue')
+                #if pkt_S is not None:
+                #    print('getting packet from the OUT queue')
                 return pkt_S
         except queue.Empty:
             return None
