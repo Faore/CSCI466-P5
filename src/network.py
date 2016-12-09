@@ -41,13 +41,32 @@ class Interface:
                 return pkt_S
 
             else:
-                pkt_S = self.out_queue.get(False)
-                #if pkt_S is not None:
-                #    print('getting packet from the OUT queue')
+                pkt_S = ''
+                # Search for High Priority
+                for item in range(self.out_queue.qsize()):
+                    if NetworkPacket.from_byte_S(self.out_queue.queue[item]).priority == 1:
+                        pkt_S = self.out_queue.queue[item]
+                        self.out_queue.queue.remove(pkt_S)
+                        # print('Returning Priority 1 packet.')
+                        break
+                # Check if one was found, if not pop whatevers first in the queue.
+                if pkt_S == '':
+                    pkt_S = self.out_queue.get(False)
                 return pkt_S
         except queue.Empty:
             return None
-        
+
+    def outQueueHigh(self):
+        count = 0
+        for item in range(self.out_queue.qsize()):
+            if NetworkPacket.from_byte_S(self.out_queue.queue[item]).priority == 1:
+                count+=1
+        return count
+    def outQueueLow(self):
+        return self.out_queue.qsize() - self.outQueueHigh()
+
+
+
     ##put the packet into the interface queue
     # @param pkt - Packet to be inserted into the queue
     # @param in_or_out - use 'in' or 'out' interface
