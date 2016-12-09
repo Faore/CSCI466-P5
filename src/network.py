@@ -61,10 +61,11 @@ class NetworkPacket:
     ##@param dst_addr: address of the destination host
     # @param data_S: packet payload
     # @param prot_S: upper layer protocol for the packet (data, or control)
-    def __init__(self, dst_addr, prot_S, data_S):
+    def __init__(self, dst_addr, prot_S, data_S, priority=0):
         self.dst_addr = dst_addr
         self.data_S = data_S
         self.prot_S = prot_S
+        self.priority = priority
         
     ## called when printing the object
     def __str__(self):
@@ -97,8 +98,17 @@ class NetworkPacket:
         data_S = byte_S[NetworkPacket.dst_addr_S_length + NetworkPacket.prot_S_length : ]        
         return self(dst_addr, prot_S, data_S)
     
+class MPLS_frame:
+    label = 0
+    packet = ''
 
-    
+    def __init__(self, label, packet):
+        self.label = label
+        self.packet = packet
+
+    @classmethod
+    def encapsulate_byte_S(self, label, byte_S):
+        return self(label, byte_S)
 
 ## Implements a network host for receiving and transmitting data
 class Host:
