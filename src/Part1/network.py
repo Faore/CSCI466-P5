@@ -136,18 +136,6 @@ class NetworkPacket:
             raise Exception('Cannot parse packet with bad priority: %s' % (priority))
         data_S = byte_S[NetworkPacket.dst_addr_S_length + NetworkPacket.prot_S_length : ]        
         return self(dst_addr, prot_S, data_S, priority)
-    
-class MPLS_frame:
-    label = 0
-    packet = ''
-
-    def __init__(self, label, packet):
-        self.label = label
-        self.packet = packet
-
-    @classmethod
-    def encapsulate_byte_S(self, label, byte_S):
-        return self(label, byte_S)
 
 ## Implements a network host for receiving and transmitting data
 class Host:
