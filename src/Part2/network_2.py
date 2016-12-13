@@ -251,7 +251,7 @@ class Router:
                 else:
                     p = NetworkPacket.from_byte_S(pkt_S) #parse a packet out
                 if p.prot_S == 'data':
-                    self.forward_packet(p,i)
+                    self.forward_packet(pkt_S,i)
                 elif p.prot_S == 'control':
                     self.update_routes(p, i)
                 else:
@@ -265,7 +265,34 @@ class Router:
             # TODO: Here you will need to implement a lookup into the 
             # forwarding table to find the appropriate outgoing interface
             # for now we assume the outgoing interface is (i+1)%2
-            self.intf_L[(i+1)%2].put(p.to_byte_S(), 'out', True)
+            if MPLS_frame.is_mpls_frame(p):
+                frame = MPLS_frame.from_byte_S(p)
+                packet = NetworkPacket.from_byte_S(MPLS_frame.packet)
+            else:
+                frame = None
+                packet = NetworkPacket.from_byte_S(p)
+
+            if frame is not None:
+                if i not in self.mpls_table:
+                    raise Exception('Couldn\'t find MPLS rule for interface.')
+                else:
+                    if frame.label not in self.mpls_table:
+                        raise Exception('Couldn\'t find MPLS rule for label.')
+                    else:
+                        out_intferface = self.mpls_table[i][frame.label][0]
+                        out_label = self.mpls_table[i][frame.label][1]
+                        out_frame = MPLS_frame(out_label, frame.packet)
+                        self.intf_L[out_intferface].put(out_frame.to_byte_S(), 'out', True)
+            else:
+                #Need to tag this with a frame:
+                if i == 0: # Host 1
+                    frame = MPLS_frame(1, packet.to_byte_S())
+                    self.intf_L[3].put(frame.to_byte_S(), 'out', True)
+                else:
+                    frame = MPLS_frame(2, packet.to_byte_S())
+                    self.intf_L[2].put(frame.to_byte_S(), 'out', True)
+
+
             print('%s: forwarding packet "%s" from interface %d to %d' % (self, p, i, (i+1)%2))
         except queue.Full:
             print('%s: packet "%s" lost on interface %d' % (self, p, i))
