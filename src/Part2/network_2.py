@@ -27,7 +27,8 @@ class Interface:
                 pkt_S = ''
                 #Search for High Priority
                 for item in range(self.in_queue.qsize()):
-                    if NetworkPacket.from_byte_S(self.in_queue.queue[item]).priority == 1:
+
+                    if MPLS_frame.get_priority(self.in_queue.queue[item]) == 1:
                         pkt_S = self.in_queue.queue[item]
                         self.in_queue.queue.remove(pkt_S)
                         #print('Returning Priority 1 packet.')
@@ -44,7 +45,7 @@ class Interface:
                 pkt_S = ''
                 # Search for High Priority
                 for item in range(self.out_queue.qsize()):
-                    if NetworkPacket.from_byte_S(self.out_queue.queue[item]).priority == 1:
+                    if MPLS_frame.get_priority(self.out_queue.queue[item]) == 1:
                         pkt_S = self.out_queue.queue[item]
                         self.out_queue.queue.remove(pkt_S)
                         # print('Returning Priority 1 packet.')
@@ -59,7 +60,7 @@ class Interface:
     def outQueueHigh(self):
         count = 0
         for item in range(self.out_queue.qsize()):
-            if NetworkPacket.from_byte_S(self.out_queue.queue[item]).priority == 1:
+            if MPLS_frame.get_priority(self.out_queue.queue[item]) == 1:
                 count+=1
         return count
     def outQueueLow(self):
@@ -157,6 +158,13 @@ class MPLS_frame:
     def is_mpls_frame(self, byte_S):
         return byte_S[0] == '#'
 
+    @classmethod
+    def get_priority(self, byte_s):
+        if self.is_mpls_frame(byte_s):
+            return NetworkPacket.from_byte_S(self.from_byte_S(byte_s).packet).priority
+        else:
+            return NetworkPacket.from_byte_S(byte_s).priority
+
     def to_byte_S(self):
         # MPLS packets can be identified by the '#' symbol starting them.
         # There is only one character for the label. Can be 0-9.
@@ -237,7 +245,11 @@ class Router:
             pkt_S = self.intf_L[i].get('in')
             #if packet exists make a forwarding decision
             if pkt_S is not None:
-                p = NetworkPacket.from_byte_S(pkt_S) #parse a packet out
+                if MPLS_frame.is_mpls_frame(pkt_S):
+                    frame = MPLS_frame.from_byte_S(pkt_S)
+                    p = NetworkPacket.from_byte_S(frame.packet)
+                else:
+                    p = NetworkPacket.from_byte_S(pkt_S) #parse a packet out
                 if p.prot_S == 'data':
                     self.forward_packet(p,i)
                 elif p.prot_S == 'control':

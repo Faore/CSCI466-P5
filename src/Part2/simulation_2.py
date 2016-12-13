@@ -19,7 +19,9 @@ if __name__ == '__main__':
     #create network hosts
     client = network_2.Host(1)
     object_L.append(client)
-    server = network_2.Host(2)
+    client2 = network_2.Host(2)
+    object_L.append(client2)
+    server = network_2.Host(3)
     object_L.append(server)
     
     #create routers and routing tables for connected clients (subnets)
@@ -31,33 +33,62 @@ if __name__ == '__main__':
     #
     router_a_mpls_table = {}
     router_a = network_2.Router(name='A', 
-                              intf_cost_L=[1,1], 
-                              intf_capacity_L=[500,500],
+                              intf_cost_L=[1,1,1,1],
+                              intf_capacity_L=[500,500,500,500],
                               rt_tbl_D = router_a_rt_tbl_D, 
                               max_queue_size=router_queue_size,
                               mpls_table=router_a_mpls_table
                               )
     object_L.append(router_a)
 
-    router_b_rt_tbl_D = {2: {1: 3}} # packet to host 2 through interface 1 for cost 3
-    router_b_mpls_table = {}
+    router_b_rt_tbl_D = {3: {1: 3}} # packet to host 2 through interface 1 for cost 3
+    router_b_mpls_table = {0: {1: (1,1)}}
     router_b = network_2.Router(name='B', 
-                              intf_cost_L=[1,3], 
+                              intf_cost_L=[1,3],
                               intf_capacity_L=[500,100],
                               rt_tbl_D = router_b_rt_tbl_D, 
                               max_queue_size=router_queue_size,
                               mpls_table=router_b_mpls_table
                               )
     object_L.append(router_b)
-    
+
+    router_c_rt_tbl_D = {3: {1: 3}}  # packet to host 2 through interface 1 for cost 3
+    router_c_mpls_table = {0: {2:(1,2)}}
+    router_c = network_2.Router(name='C',
+                                intf_cost_L=[1, 3],
+                                intf_capacity_L=[500, 100],
+                                rt_tbl_D=router_c_rt_tbl_D,
+                                max_queue_size=router_queue_size,
+                                mpls_table=router_c_mpls_table
+                                )
+    object_L.append(router_c)
+
+    router_d_rt_tbl_D = {2: {1: 3}}  # packet to host 2 through interface 1 for cost 3
+    router_d_mpls_table = {0: {1:(2,1)}, 1:{2:(2,2)}}
+    router_d = network_2.Router(name='D',
+                                intf_cost_L=[1, 3, 1],
+                                intf_capacity_L=[500, 100, 100],
+                                rt_tbl_D=router_d_rt_tbl_D,
+                                max_queue_size=router_queue_size,
+                                mpls_table=router_d_mpls_table
+                                )
+    object_L.append(router_d)
+
     #create a Link Layer to keep track of links between network nodes
     link_layer = link_2.LinkLayer()
     object_L.append(link_layer)
     
     #add all the links
     link_layer.add_link(link_2.Link(client, 0, router_a, 0))
-    link_layer.add_link(link_2.Link(router_a, 1, router_b, 0))
-    link_layer.add_link(link_2.Link(router_b, 1, server, 0))
+    link_layer.add_link(link_2.Link(client2, 0, router_a, 1))
+
+    link_layer.add_link(link_2.Link(router_a, 3, router_b, 0))
+    link_layer.add_link(link_2.Link(router_a, 2, router_c, 0))
+
+    link_layer.add_link(link_2.Link(router_b, 1, router_d, 0))
+    link_layer.add_link(link_2.Link(router_c, 1, router_d, 1))
+
+    link_layer.add_link(link_2.Link(router_d, 2, server, 0))
     
     
     #start all the objects
