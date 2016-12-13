@@ -124,7 +124,10 @@ class NetworkPacket:
     # @param byte_S: byte string representation of the packet
     @classmethod
     def from_byte_S(self, byte_S):
-        dst_addr = int(byte_S[0 : NetworkPacket.dst_addr_S_length])
+        try:
+            dst_addr = int(byte_S[0 : NetworkPacket.dst_addr_S_length])
+        except:
+            raise Exception("DEBUG:::::::::::::::::::" + byte_S)
         prot_S = byte_S[NetworkPacket.dst_addr_S_length : NetworkPacket.dst_addr_S_length + NetworkPacket.prot_S_length]
         priority = byte_S[NetworkPacket.dst_addr_S_length + NetworkPacket.prot_S_length : NetworkPacket.dst_addr_S_length + NetworkPacket.prot_S_length + 1]
         if prot_S == '1':
@@ -145,8 +148,12 @@ class MPLS_frame:
     def __init__(self, label, packet):
         if len(str(label)) != 1:
             raise Exception('Label length invalid.')
+
         self.label = label
-        self.packet = packet
+        self.packet = str(packet)
+
+        if self.packet == '':
+            raise Exception('Empty packet!!!!!!')
 
     @classmethod
     def from_byte_S(self, byte_S):
@@ -253,7 +260,7 @@ class Router:
                 if p.prot_S == 'data':
                     self.forward_packet(pkt_S,i)
                 elif p.prot_S == 'control':
-                    self.update_routes(p, i)
+                    self.update_routes(pkt_S, i)
                 else:
                     raise Exception('%s: Unknown packet type in packet %s' % (self, p))
             
@@ -267,7 +274,9 @@ class Router:
             # for now we assume the outgoing interface is (i+1)%2
             if MPLS_frame.is_mpls_frame(p):
                 frame = MPLS_frame.from_byte_S(p)
-                packet = NetworkPacket.from_byte_S(MPLS_frame.packet)
+                #print("Frame label: " + str(frame.label))
+                #print("Frame packet: " + frame.packet)
+                packet = NetworkPacket.from_byte_S(frame.packet)
             else:
                 frame = None
                 packet = NetworkPacket.from_byte_S(p)
@@ -276,13 +285,17 @@ class Router:
                 if i not in self.mpls_table:
                     raise Exception('Couldn\'t find MPLS rule for interface.')
                 else:
-                    if frame.label not in self.mpls_table:
-                        raise Exception('Couldn\'t find MPLS rule for label.')
+                    if frame.label not in self.mpls_table[i]:
+                        raise Exception('Couldn\'t find MPLS rule for label. Received label: ' + str(frame.label))
                     else:
                         out_intferface = self.mpls_table[i][frame.label][0]
                         out_label = self.mpls_table[i][frame.label][1]
-                        out_frame = MPLS_frame(out_label, frame.packet)
-                        self.intf_L[out_intferface].put(out_frame.to_byte_S(), 'out', True)
+                        if out_label is None:
+                            self.intf_L[out_intferface].put(frame.packet, 'out', True)
+                        else:
+                            out_frame = MPLS_frame(out_label, frame.packet)
+                            self.intf_L[out_intferface].put(out_frame.to_byte_S(), 'out', True)
+                        print('%s: forwarding packet "%s" from interface %d to %d' % (self, p, i, out_intferface))
             else:
                 #Need to tag this with a frame:
                 if i == 0: # Host 1
@@ -293,7 +306,7 @@ class Router:
                     self.intf_L[2].put(frame.to_byte_S(), 'out', True)
 
 
-            print('%s: forwarding packet "%s" from interface %d to %d' % (self, p, i, (i+1)%2))
+
         except queue.Full:
             print('%s: packet "%s" lost on interface %d' % (self, p, i))
             pass

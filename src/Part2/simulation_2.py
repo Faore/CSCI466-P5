@@ -11,7 +11,7 @@ import sys
 
 ##configuration parameters
 router_queue_size = 0 #0 means unlimited
-simulation_time = 10000 #give the network sufficient time to transfer all packets before quitting
+simulation_time = 25 #give the network sufficient time to transfer all packets before quitting
 
 if __name__ == '__main__':
     object_L = [] #keeps track of objects, so we can kill their threads
@@ -64,7 +64,7 @@ if __name__ == '__main__':
     object_L.append(router_c)
 
     router_d_rt_tbl_D = {2: {1: 3}}  # packet to host 2 through interface 1 for cost 3
-    router_d_mpls_table = {0: {1:(2,1)}, 1:{2:(2,2)}}
+    router_d_mpls_table = {0: {1:(2,None)}, 1:{2:(2,None)}}
     router_d = network_2.Router(name='D',
                                 intf_cost_L=[1, 3, 1],
                                 intf_capacity_L=[500, 100, 100],
@@ -103,7 +103,8 @@ if __name__ == '__main__':
     for i in range(5):
         priority = i%2
         print(priority)
-        client.udt_send(2, 'Sample client data %d' % i, priority)
+        client.udt_send(3, 'Sample client data %d' % i, priority)
+        client2.udt_send(3, 'Sample client data %d' % i, priority)
         
     #give the network sufficient time to transfer all packets before quitting
     sleep(simulation_time)
